@@ -1,0 +1,156 @@
+-- 1. Create Departments table
+CREATE TABLE Departments (
+    Department_ID NUMBER PRIMARY KEY,
+    Department_Name VARCHAR2(50) NOT NULL UNIQUE,
+    Manager_ID NUMBER,
+    Location_ID NUMBER,
+    CONSTRAINT fk_manager FOREIGN KEY (Manager_ID) REFERENCES Employees(Employee_ID)
+);
+
+-- 2. Alter Departments table to add Established_Date column
+ALTER TABLE Departments
+ADD Established_Date DATE DEFAULT SYSDATE;
+
+-- 3. Rename Departments table to Company_Departments
+ALTER TABLE Departments RENAME TO Company_Departments;
+
+-- 4. Drop Company_Departments table (assuming no dependent constraints)
+DROP TABLE Company_Departments;
+
+-- 5. Create Project_Allocation table similar to Job_History, insert 3 rows, then truncate
+CREATE TABLE Project_Allocation AS SELECT * FROM Job_History WHERE 1=0;
+INSERT INTO Project_Allocation VALUES (1, TO_DATE('2023-01-01', 'YYYY-MM-DD'), TO_DATE('2023-12-31', 'YYYY-MM-DD'), 'IT_PROG', 60);
+INSERT INTO Project_Allocation VALUES (2, TO_DATE('2023-02-01', 'YYYY-MM-DD'), TO_DATE('2023-11-30', 'YYYY-MM-DD'), 'SA_REP', 80);
+INSERT INTO Project_Allocation VALUES (3, TO_DATE('2023-03-01', 'YYYY-MM-DD'), TO_DATE('2023-10-31', 'YYYY-MM-DD'), 'ST_CLERK', 50);
+TRUNCATE TABLE Project_Allocation;
+
+-- 6. Create Parent and Child tables with deferred constraint checking
+CREATE TABLE Parent (
+    id NUMBER PRIMARY KEY
+);
+
+CREATE TABLE Child (
+    id NUMBER PRIMARY KEY,
+    parent_id NUMBER,
+    CONSTRAINT fk_parent FOREIGN KEY (parent_id) REFERENCES Parent(id) DEFERRABLE INITIALLY DEFERRED
+);
+
+-- Insert data with deferred constraint checking
+SET CONSTRAINTS ALL DEFERRED;
+INSERT INTO Child (id, parent_id) VALUES (1, 1);
+INSERT INTO Parent (id) VALUES (1);
+COMMIT;
+
+-- 7. Add unique constraint on Email column in Employees table
+ALTER TABLE Employees ADD CONSTRAINT uq_email UNIQUE (Email);
+
+-- 8. Create Employee_Salaries table with check constraint
+CREATE TABLE Employee_Salaries (
+    Employee_ID NUMBER PRIMARY KEY,
+    Salary NUMBER,
+    CONSTRAINT chk_salary CHECK (Salary > 3000 AND Salary < 10000)
+);
+
+-- 9. Insert new row into Employees and update Salary
+INSERT INTO Employees (Employee_ID, First_Name, Last_Name, Email, Hire_Date, Job_ID, Salary)
+VALUES (207, 'John', 'Doe', 'johndoe@example.com', SYSDATE, 'IT_PROG', 5000);
+
+UPDATE Employees SET Salary = 8500 WHERE Employee_ID = 106;
+
+-- 10. Create Projects table with foreign key, insert data, and attempt to delete referenced row
+CREATE TABLE Projects (
+    Project_ID NUMBER PRIMARY KEY,
+    Project_Name VARCHAR2(50),
+    Department_ID NUMBER,
+    CONSTRAINT fk_department FOREIGN KEY (Department_ID) REFERENCES Departments(Department_ID)
+);
+
+INSERT INTO Departments (Department_ID, Department_Name) VALUES (1, 'IT');
+INSERT INTO Projects (Project_ID, Project_Name, Department_ID) VALUES (1, 'Project A', 1);
+
+-- This will fail due to foreign key constraint
+DELETE FROM Departments WHERE Department_ID = 1;
+
+-- 11. Create new user and grant privileges (execute as SYS or SYSTEM user)
+CREATE USER lab_user IDENTIFIED BY password;
+GRANT CREATE SESSION, CREATE TABLE, CREATE VIEW TO lab_user;
+GRANT UNLIMITED TABLESPACE TO lab_user;
+
+-- 12. Create Jobs and Job_History tables
+CREATE TABLE Jobs (
+    Job_ID VARCHAR2(10) PRIMARY KEY,
+    Job_Title VARCHAR2(35),
+    Min_Salary NUMBER,
+    Max_Salary NUMBER
+);
+
+CREATE TABLE Job_History (
+    Employee_ID NUMBER,
+    Start_Date DATE,
+    End_Date DATE,
+    Job_ID VARCHAR2(10),
+    Department_ID NUMBER
+);
+
+-- 13. Change data type of Job_ID from character to numeric
+-- First, we need to drop the primary key constraint
+ALTER TABLE Jobs DROP CONSTRAINT jobs_pk;
+
+-- Then, we can change the data type
+ALTER TABLE Jobs MODIFY Job_ID NUMBER;
+
+-- Re-add the primary key constraint
+ALTER TABLE Jobs ADD CONSTRAINT jobs_pk PRIMARY KEY (Job_ID);
+
+-- 14. Add Job_ID as foreign key in Job_History table
+ALTER TABLE Job_History ADD CONSTRAINT fk_job_id 
+FOREIGN KEY (Job_ID) REFERENCES Jobs(Job_ID);
+
+-- 15. Insert new row in Jobs table
+INSERT INTO Jobs (Job_ID, Job_Title, Min_Salary, Max_Salary) 
+VALUES (101, 'Software Engineer', 50000, 100000);
+
+-- This will update Job_History table automatically due to the foreign key relationship
+
+-- 16. Add Job_Nature column to Jobs table
+ALTER TABLE Jobs ADD Job_Nature VARCHAR2(50);
+
+-- 17. Create replica of Employee table
+CREATE TABLE Employee_Replica AS SELECT * FROM Employees;
+
+-- 18. Add Employee_ID as foreign key in Job_History table
+ALTER TABLE Job_History ADD CONSTRAINT fk_employee_id 
+FOREIGN KEY (Employee_ID) REFERENCES Employees(Employee_ID);
+
+-- 19. Drop Job_Nature column
+ALTER TABLE Jobs DROP COLUMN Job_Nature;
+
+-- 20. Add CHECK constraint on First_Name in Employee table
+ALTER TABLE Employee_Replica ADD CONSTRAINT chk_first_name 
+CHECK (First_Name = UPPER(First_Name));
+
+-- 21. Add UNIQUE constraint on Salary in Employee table
+ALTER TABLE Employee_Replica ADD CONSTRAINT uq_salary UNIQUE (Salary);
+
+-- 22. Modify Phone_No to NOT NULL in Employee table
+ALTER TABLE Employee_Replica MODIFY Phone_No VARCHAR2(20) NOT NULL;
+
+-- 23. Insert one row into Employees table
+INSERT INTO Employees (Employee_ID, First_Name, Last_Name, Email, Phone_Number, Hire_Date, Job_ID, Salary, Commission_Pct, Manager_ID, Department_ID)
+VALUES (208, 'Jane', 'Smith', 'janesmith@example.com', '515.123.4567', SYSDATE, 'SA_REP', 6000, 0.1, 145, 80);
+
+-- 24. Update Salary of employee with ID 105
+UPDATE Employees SET Salary = 8000 
+WHERE Employee_ID = 105 AND Salary < 1000;
+
+-- 25. Add composite primary key (this will fail if there's an existing primary key)
+-- ALTER TABLE Employees ADD CONSTRAINT pk_emp_job PRIMARY KEY (Employee_ID, Job_ID);
+-- This fails because Employee_ID is already a primary key. You can't have two primary keys in a table.
+
+-- 26. Add index on Job_ID in Job_History table
+CREATE INDEX indx_job_id ON Job_History(Job_ID);
+
+-- 27. Remove Employees table (this will fail if there are dependent foreign key constraints)
+-- DROP TABLE Employees;
+-- This command will fail if there are foreign key constraints referencing the Employees table.
+-- You would need to drop or disable all dependent constraints first.

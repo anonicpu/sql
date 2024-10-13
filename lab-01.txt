@@ -1,0 +1,87 @@
+-- 1. Write a SQL statement to display all the information of table Employees.
+SELECT * FROM Employees;
+
+-- 2. Write a SQL query to find min and max salary of the Job table with Job title 'President' from Jobs table.
+SELECT MIN(min_salary) AS min_salary, MAX(max_salary) AS max_salary
+FROM Jobs
+WHERE job_title = 'President';
+
+-- 3. Write a SQL query to find those employees whose Salaries is greater than 20000 from Employees table.
+SELECT * FROM Employees
+WHERE salary > 20000;
+
+-- 4. Write a SQL query to find the Jobs whose salary are higher than or equal to $15000 from Employees table.
+SELECT DISTINCT job_id
+FROM Employees
+WHERE salary >= 15000;
+
+-- 5. Write a SQL query to find the details of employees whose last name is 'Snares'. Return employee ID, employee first name, employee last name and employee dept ID.
+SELECT employee_id, first_name, last_name, department_id
+FROM Employees
+WHERE last_name = 'Snares';
+
+-- 6. Write a SQL query to find the details of the employees who work in the department 57. Return employee ID, employee first name, employee last name and employee dept ID.
+SELECT employee_id, first_name, last_name, department_id
+FROM Employees
+WHERE department_id = 57;
+
+-- 7. Write a query to find the PHONE_NUMBER of the DEPARTMENT_ID=80 and MANAGER_ID=100 of Employees table.
+SELECT phone_number
+FROM Employees
+WHERE department_id = 80 AND manager_id = 100;
+
+-- 8. write a SQL query to find the Employees with the First name "John" "NEENA" and "Lency"
+SELECT * FROM Employees
+WHERE first_name IN ('John', 'NEENA', 'Lency');
+
+-- 9. Write a query to find the list of cities with country ID 'IT' from locations table.
+SELECT city FROM locations
+WHERE country_id = 'IT';
+
+-- 10. Write a query to find the list of city except country ID 'IN' and 'CH' from locations table.
+SELECT city FROM locations
+WHERE country_id NOT IN ('IN', 'CH');
+
+-- 11. Write a query to find the list of jobs whose min salary is greater than 8000 and less than 15,000 from job table.
+SELECT * FROM Jobs
+WHERE min_salary > 8000 AND min_salary < 15000;
+
+-- 12. Write a query to find list of phone with DEPARTMENT_ID '90' but not with job_id 'IT_PROG' from Employees table.
+SELECT phone_number
+FROM Employees
+WHERE department_id = 90 AND job_id != 'IT_PROG';
+
+-- 13. Write a query to find the list of employees who are hired after '12-Dec-07' from employee table.
+SELECT * FROM Employees
+WHERE hire_date > TO_DATE('12-Dec-07', 'DD-MON-YY');
+
+-- 14. Write a query to find the list of employees who are hired after '12-Dec-07' in Department with DEPARTMENT_ID=100 from employee table.
+SELECT * FROM Employees
+WHERE hire_date > TO_DATE('12-Dec-07', 'DD-MON-YY') AND department_id = 100;
+
+-- 15. Write a query to find the list of employees who are hired after '12-Dec-07' but not in Department with DEPARTMENT_ID=100 from employee table.
+SELECT * FROM Employees
+WHERE hire_date > TO_DATE('12-Dec-07', 'DD-MON-YY') AND department_id != 100;
+
+-- 16. Write a query to find the list of employees whose COMMISSION_PCT=0 and they do not belong to DEPARTMENT_ID 90 or 100 from Employees table
+SELECT * FROM Employees
+WHERE commission_pct = 0 AND department_id NOT IN (90, 100);
+
+-- 17. Write a query to find the employees who are hired in year 2010 from Employees table.
+SELECT * FROM Employees
+WHERE EXTRACT(YEAR FROM hire_date) = 2010;
+
+-- 18. Write a query to find the list of jobs whose min salary is greater than 8000 and less than 15,000 from job table.
+SELECT * FROM Jobs
+WHERE min_salary > 8000 AND min_salary < 15000;
+
+-- 19. Write a query to find employee whose ID are greater than 100 and less than 150 and their department_id is greater than 90 and less than 100 along with their F_name, Last_name & Job ID.
+SELECT first_name, last_name, job_id
+FROM Employees
+WHERE employee_id > 100 AND employee_id < 150
+  AND department_id > 90 AND department_id < 100;
+
+-- 20. Write a query to find total salary along with salary & commission_pct Total salary formula = commission_pct, salary+(commission_pct*salary)
+SELECT salary, commission_pct, 
+       salary + (NVL(commission_pct, 0) * salary) AS total_salary
+FROM Employees;

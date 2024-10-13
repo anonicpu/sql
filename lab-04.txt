@@ -1,0 +1,165 @@
+-- 1. Average salary for each job > $10,000
+SELECT job_id, AVG(salary) AS avg_salary
+FROM employees
+GROUP BY job_id
+HAVING AVG(salary) > 10000;
+
+-- 2. Departments with > 2 employees and employees making > $10,000
+SELECT department_id, COUNT(*) AS employee_count
+FROM employees
+WHERE salary > 10000
+GROUP BY department_id
+HAVING COUNT(*) > 2;
+
+-- 3. Department with most recent job start date
+SELECT department_id
+FROM (
+    SELECT department_id
+    FROM job_history
+    ORDER BY start_date DESC
+)
+WHERE ROWNUM = 1;
+
+-- 4. Create indexes and list employees not in job_history
+CREATE INDEX idx_emp_id ON employees(employee_id);
+CREATE INDEX idx_job_hist_emp_id ON job_history(employee_id);
+
+SELECT e.employee_id, e.first_name, e.last_name
+FROM employees e
+LEFT JOIN job_history jh ON e.employee_id = jh.employee_id
+WHERE jh.employee_id IS NULL;
+
+-- 5. Department number and highest salary > $2,000, sorted descending
+SELECT department_id, MAX(salary) AS max_salary
+FROM employees
+GROUP BY department_id
+HAVING MAX(salary) > 2000
+ORDER BY max_salary DESC;
+
+-- 6. Top 3 departments with average salary > $6,000
+SELECT *
+FROM (
+    SELECT department_id, AVG(salary) AS avg_salary
+    FROM employees
+    GROUP BY department_id
+    HAVING AVG(salary) > 6000
+    ORDER BY avg_salary DESC
+)
+WHERE ROWNUM <= 3;
+
+-- 7. Employees with same job as Employee_ID 150
+SELECT last_name, job_id
+FROM employees
+WHERE job_id = (SELECT job_id FROM employees WHERE employee_id = 150);
+
+-- 8. Create Job_History1 and insert records
+CREATE TABLE Job_History1 AS SELECT * FROM hr.job_history WHERE 1=0;
+
+INSERT INTO Job_History1
+SELECT * FROM hr.job_history
+WHERE end_date = TO_DATE('19-DEC-07', 'DD-MON-YY');
+
+-- 9. Insert 5 rows and delete records with job_id 'AC_ACCOUNT'
+INSERT INTO Job_History1 VALUES (1, TO_DATE('01-JAN-20', 'DD-MON-YY'), TO_DATE('31-DEC-20', 'DD-MON-YY'), 'IT_PROG', 60);
+INSERT INTO Job_History1 VALUES (2, TO_DATE('01-FEB-20', 'DD-MON-YY'), TO_DATE('31-JAN-21', 'DD-MON-YY'), 'SA_REP', 80);
+INSERT INTO Job_History1 VALUES (3, TO_DATE('01-MAR-20', 'DD-MON-YY'), TO_DATE('28-FEB-21', 'DD-MON-YY'), 'ST_CLERK', 50);
+INSERT INTO Job_History1 VALUES (4, TO_DATE('01-APR-20', 'DD-MON-YY'), TO_DATE('31-MAR-21', 'DD-MON-YY'), 'AC_ACCOUNT', 110);
+INSERT INTO Job_History1 VALUES (5, TO_DATE('01-MAY-20', 'DD-MON-YY'), TO_DATE('30-APR-21', 'DD-MON-YY'), 'MK_REP', 20);
+
+DELETE FROM Job_History1 WHERE job_id = 'AC_ACCOUNT';
+
+-- 10. Delete records from Job_History for 'IT' department
+DELETE FROM Job_History
+WHERE department_id IN (SELECT department_id FROM departments WHERE department_name = 'IT');
+
+-- 11. Employees earning more than their department average
+SELECT e.first_name, e.last_name, e.salary
+FROM employees e
+WHERE e.salary > (
+    SELECT AVG(salary)
+    FROM employees
+    WHERE department_id = e.department_id
+);
+
+-- 12. Lowest salary for each job > $1,000, sorted ascending
+SELECT job_id, MIN(salary) AS min_salary
+FROM employees
+GROUP BY job_id
+HAVING MIN(salary) > 1000
+ORDER BY min_salary ASC;
+
+-- 13. Employees in same department as Employee_ID 140
+SELECT first_name, department_id
+FROM employees
+WHERE department_id = (SELECT department_id FROM employees WHERE employee_id = 140);
+
+-- 14. Employees with same job as 7369 and salary > 7876
+SELECT *
+FROM employees
+WHERE job_id = (SELECT job_id FROM employees WHERE employee_id = 7369)
+AND salary > (SELECT salary FROM employees WHERE employee_id = 7876);
+
+-- 15. Create replica of employees and increase salary
+CREATE TABLE employees_replica AS SELECT * FROM employees;
+
+UPDATE employees_replica
+SET salary = salary * 1.12
+WHERE salary BETWEEN 5000 AND 10000;
+
+-- 16. Top 10% salaries
+SELECT *
+FROM (
+    SELECT first_name, last_name, salary
+    FROM employees
+    ORDER BY salary DESC
+)
+WHERE ROWNUM <= (SELECT COUNT(*) * 0.1 FROM employees);
+
+-- 17. Number of departments with the same location
+SELECT location_id, COUNT(*) AS dept_count
+FROM departments
+GROUP BY location_id
+HAVING COUNT(*) > 1;
+
+-- 18. Lowest salary for each job, excluding unknown jobs and salaries < 1500
+SELECT job_id, MIN(salary) AS min_salary
+FROM employees
+WHERE job_id IS NOT NULL
+GROUP BY job_id
+HAVING MIN(salary) > 1500
+ORDER BY min_salary DESC;
+
+-- 19. Employees in same department as Employee_ID 130
+SELECT first_name, department_id
+FROM employees
+WHERE department_id = (SELECT department_id FROM employees WHERE employee_id = 130);
+
+-- 20. Employees not in dept 30 earning more than all in dept 30
+SELECT *
+FROM employees
+WHERE department_id != 30
+AND salary > ALL (SELECT salary FROM employees WHERE department_id = 30);
+
+-- 21. Departments with avg salary > any dept in New York
+SELECT d.department_id, d.department_name, l.city
+FROM departments d
+JOIN locations l ON d.location_id = l.location_id
+WHERE d.department_id IN (
+    SELECT department_id
+    FROM employees
+    GROUP BY department_id
+    HAVING AVG(salary) > ANY (
+        SELECT AVG(salary)
+        FROM employees e
+        JOIN departments d ON e.department_id = d.department_id
+        JOIN locations l ON d.location_id = l.location_id
+        WHERE l.city = 'New York'
+        GROUP BY e.department_id
+    )
+);
+
+-- 22. Insert into employees_BKP
+INSERT INTO employees_BKP
+SELECT *
+FROM employees
+WHERE hire_date = TO_DATE('10-MAR-03', 'DD-MON-YY');

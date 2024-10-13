@@ -1,0 +1,197 @@
+-- 1. List name, job title, department name, and salary in ascending order of department
+SELECT e.first_name, e.last_name, j.job_title, d.department_name, e.salary
+FROM employees e
+JOIN jobs j ON e.job_id = j.job_id
+JOIN departments d ON e.department_id = d.department_id
+ORDER BY d.department_name ASC;
+
+-- 2. Departments with at least two employees
+SELECT d.department_name, COUNT(*) as employee_count
+FROM employees e
+JOIN departments d ON e.department_id = d.department_id
+GROUP BY d.department_name
+HAVING COUNT(*) >= 2;
+
+-- 3. Employees with salary less than the lowest salary in the company
+SELECT *
+FROM employees
+WHERE salary < (SELECT MIN(salary) FROM employees);
+
+-- 4. Employees earning 60000+ annually, not ANALYST
+SELECT e.first_name, e.last_name, j.job_title, e.salary * 12 as annual_salary, d.department_name, l.city
+FROM employees e
+JOIN jobs j ON e.job_id = j.job_id
+JOIN departments d ON e.department_id = d.department_id
+JOIN locations l ON d.location_id = l.location_id
+WHERE e.salary * 12 >= 60000 AND j.job_title != 'ANALYST';
+
+-- 5. Employees who are also Managers
+SELECT e.first_name, e.last_name, j.job_title
+FROM employees e
+JOIN jobs j ON e.job_id = j.job_id
+WHERE j.job_title LIKE '%Manager%';
+
+-- 6. Departments with no employees
+SELECT d.department_id, d.department_name
+FROM departments d
+LEFT JOIN employees e ON d.department_id = e.department_id
+WHERE e.employee_id IS NULL;
+
+-- 7. Employees and their departments, including those with no department
+SELECT e.first_name, e.last_name, e.salary, COALESCE(d.department_name, 'No Department') as department_name
+FROM employees e
+LEFT JOIN departments d ON e.department_id = d.department_id;
+
+-- 8. Employees in departments located in cities without a state province
+SELECT e.first_name, e.last_name, j.job_title, d.department_name, l.city
+FROM employees e
+JOIN departments d ON e.department_id = d.department_id
+JOIN locations l ON d.location_id = l.location_id
+JOIN jobs j ON e.job_id = j.job_id
+WHERE l.state_province IS NULL;
+
+-- 9. Records from one table that do not exist in another table
+-- Assuming we're looking for employees not in job_history
+SELECT e.*
+FROM employees e
+LEFT JOIN job_history jh ON e.employee_id = jh.employee_id
+WHERE jh.employee_id IS NULL;
+
+-- 10. Employees in the US but not in Washington
+SELECT e.first_name, e.last_name
+FROM employees e
+JOIN departments d ON e.department_id = d.department_id
+JOIN locations l ON d.location_id = l.location_id
+WHERE l.country_id = 'US' AND l.state_province != 'Washington';
+
+-- 11. Employees with salary higher than their department average
+SELECT e.first_name, e.last_name, j.job_title, d.department_name, l.city
+FROM employees e
+JOIN jobs j ON e.job_id = j.job_id
+JOIN departments d ON e.department_id = d.department_id
+JOIN locations l ON d.location_id = l.location_id
+WHERE e.salary > (
+    SELECT AVG(salary)
+    FROM employees
+    WHERE department_id = e.department_id
+);
+
+-- 12. Employees who changed job title at least once
+SELECT DISTINCT e.first_name, e.last_name
+FROM employees e
+JOIN job_history jh ON e.employee_id = jh.employee_id
+WHERE e.job_id != jh.job_id;
+
+-- 13. Employees in same department as their managers
+SELECT e.first_name, e.last_name
+FROM employees e
+JOIN employees m ON e.manager_id = m.employee_id
+WHERE e.department_id = m.department_id;
+
+-- 14. Employees working in same country as their department location
+SELECT e.first_name, e.last_name, d.department_name, l.country_id
+FROM employees e
+JOIN departments d ON e.department_id = d.department_id
+JOIN locations l ON d.location_id = l.location_id
+WHERE l.country_id = (
+    SELECT country_id
+    FROM locations
+    WHERE location_id = d.location_id
+);
+
+-- 15. Employees in departments with more than 5 employees
+SELECT e.first_name, e.last_name
+FROM employees e
+WHERE e.department_id IN (
+    SELECT department_id
+    FROM employees
+    GROUP BY department_id
+    HAVING COUNT(*) > 5
+);
+
+-- 16. Employees with their managers' names
+SELECT e.first_name || ' ' || e.last_name AS employee_name,
+       m.first_name || ' ' || m.last_name AS manager_name
+FROM employees e
+LEFT JOIN employees m ON e.manager_id = m.employee_id;
+
+-- 17. Employees in departments located in different country than their residence
+SELECT e.first_name, e.last_name, d.department_name
+FROM employees e
+JOIN departments d ON e.department_id = d.department_id
+JOIN locations l ON d.location_id = l.location_id
+WHERE l.country_id != (
+    SELECT country_id
+    FROM locations
+    WHERE location_id = e.location_id
+);
+
+-- 18. Employees earning more than dept avg but less than company max
+SELECT e.first_name, e.last_name, e.salary
+FROM employees e
+WHERE e.salary > (
+    SELECT AVG(salary)
+    FROM employees
+    WHERE department_id = e.department_id
+) AND e.salary < (
+    SELECT MAX(salary)
+    FROM employees
+);
+
+-- 19. Employees who worked in multiple departments
+SELECT DISTINCT e.first_name, e.last_name, jh.job_id, d.department_name
+FROM employees e
+JOIN job_history jh ON e.employee_id = jh.employee_id
+JOIN departments d ON jh.department_id = d.department_id
+WHERE e.employee_id IN (
+    SELECT employee_id
+    FROM job_history
+    GROUP BY employee_id
+    HAVING COUNT(DISTINCT department_id) > 1
+);
+
+-- 20. Employees who worked in more than one region
+SELECT e.first_name, e.last_name
+FROM employees e
+JOIN job_history jh ON e.employee_id = jh.employee_id
+JOIN departments d ON jh.department_id = d.department_id
+JOIN locations l ON d.location_id = l.location_id
+JOIN countries c ON l.country_id = c.country_id
+GROUP BY e.employee_id, e.first_name, e.last_name
+HAVING COUNT(DISTINCT c.region_id) > 1;
+
+-- 21. Employees and their working region
+SELECT e.first_name, e.last_name, r.region_name
+FROM employees e
+JOIN departments d ON e.department_id = d.department_id
+JOIN locations l ON d.location_id = l.location_id
+JOIN countries c ON l.country_id = c.country_id
+JOIN regions r ON c.region_id = r.region_id;
+
+-- 22. Employees with same last name but different departments
+SELECT e1.first_name, e1.last_name, e1.department_id
+FROM employees e1
+JOIN employees e2 ON e1.last_name = e2.last_name AND e1.department_id != e2.department_id
+WHERE e1.employee_id < e2.employee_id;
+
+-- 23. Employees who changed job titles more than twice
+SELECT e.first_name, e.last_name
+FROM employees e
+JOIN job_history jh ON e.employee_id = jh.employee_id
+GROUP BY e.employee_id, e.first_name, e.last_name
+HAVING COUNT(DISTINCT jh.job_id) > 2;
+
+-- 24. Job titles not currently assigned to any employee
+SELECT j.job_title
+FROM jobs j
+LEFT JOIN employees e ON j.job_id = e.job_id
+WHERE e.employee_id IS NULL;
+
+-- 25. Top 3 employees with highest salaries in each department
+SELECT *
+FROM (
+    SELECT e.first_name, e.last_name, e.salary, e.department_id,
+           RANK() OVER (PARTITION BY e.department_id ORDER BY e.salary DESC) as salary_rank
+    FROM employees e
+)
+WHERE salary_rank <= 3;

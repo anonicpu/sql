@@ -1,0 +1,113 @@
+-- 1. Display the Job_ID, job title, and the difference between the maximum and minimum salaries within their department
+SELECT j.job_id, j.job_title, MAX(e.salary) - MIN(e.salary) AS salary_difference
+FROM jobs j
+JOIN employees e ON j.job_id = e.job_id
+GROUP BY j.job_id, j.job_title;
+
+-- 2. List the employee name, department name, and the percentage of their salary relative to the total salary of their department
+SELECT e.first_name || ' ' || e.last_name AS employee_name, 
+       d.department_name, 
+       ROUND(e.salary / SUM(e.salary) OVER (PARTITION BY e.department_id) * 100, 2) AS salary_percentage
+FROM employees e
+JOIN departments d ON e.department_id = d.department_id;
+
+-- 3. Write a query to find all employees who have not received a commission, and display their name and department name
+SELECT e.first_name || ' ' || e.last_name AS employee_name, d.department_name
+FROM employees e
+JOIN departments d ON e.department_id = d.department_id
+WHERE e.commission_pct IS NULL;
+
+-- 4. Display the employee name, salary, and the number of years they have been with the company, rounded to the nearest year
+SELECT first_name || ' ' || last_name AS employee_name, 
+       salary, 
+       ROUND(MONTHS_BETWEEN(SYSDATE, hire_date) / 12) AS years_of_service
+FROM employees;
+
+-- 5. List the employee name and the length of their last name, ordered by the length in descending order
+SELECT first_name || ' ' || last_name AS employee_name, LENGTH(last_name) AS last_name_length
+FROM employees
+ORDER BY last_name_length DESC;
+
+-- 6. List the employee names with any leading zeros removed from their employee ID
+SELECT first_name || ' ' || last_name AS employee_name, 
+       LTRIM(TO_CHAR(employee_id), '0') AS employee_id_no_leading_zeros
+FROM employees;
+
+-- 7. Display the employee name and their salary with a comma as a thousand separator
+SELECT first_name || ' ' || last_name AS employee_name, 
+       TO_CHAR(salary, '999,999') AS formatted_salary
+FROM employees;
+
+-- 8. Find the names of employees who have been with the company for exactly 5 years and display their employee ID, name, and hire date
+SELECT employee_id, first_name || ' ' || last_name AS employee_name, hire_date
+FROM employees
+WHERE TRUNC(MONTHS_BETWEEN(SYSDATE, hire_date) / 12) = 5;
+
+-- 9. List the employee name and the current date formatted as 'DD-MON-YYYY'
+SELECT first_name || ' ' || last_name AS employee_name, 
+       TO_CHAR(SYSDATE, 'DD-MON-YYYY') AS current_date
+FROM employees;
+
+-- 10. Display the employee name, department ID, and their job title for all employees whose job title contains the letter 'E'
+SELECT first_name || ' ' || last_name AS employee_name, department_id, job_title
+FROM employees e
+JOIN jobs j ON e.job_id = j.job_id
+WHERE UPPER(j.job_title) LIKE '%E%';
+
+-- 11. List the employee name, salary, and the number of employees in their department
+SELECT e.first_name || ' ' || e.last_name AS employee_name, 
+       e.salary, 
+       COUNT(*) OVER (PARTITION BY e.department_id) AS employees_in_department
+FROM employees e;
+
+-- 12. Display the employee name and the number of days between their hire date and the first day of the following month
+SELECT first_name || ' ' || last_name AS employee_name, 
+       TRUNC(LAST_DAY(hire_date) + 1) - hire_date AS days_to_next_month
+FROM employees;
+
+-- 13. Write a query to display the employee name and job title for all employees who have 'Manager' in their job title
+SELECT e.first_name || ' ' || e.last_name AS employee_name, j.job_title
+FROM employees e
+JOIN jobs j ON e.job_id = j.job_id
+WHERE UPPER(j.job_title) LIKE '%MANAGER%';
+
+-- 14. Display the employee names with any leading and trailing spaces removed
+SELECT TRIM(first_name || ' ' || last_name) AS employee_name
+FROM employees;
+
+-- 15. List the employee name, department name, and the difference in days between their hire date and the current date
+SELECT e.first_name || ' ' || e.last_name AS employee_name, 
+       d.department_name, 
+       TRUNC(SYSDATE - e.hire_date) AS days_employed
+FROM employees e
+JOIN departments d ON e.department_id = d.department_id;
+
+-- 16. Display the employee name, salary, and the total salary of all employees in their department, along with the difference between their salary and the average salary of the department
+SELECT e.first_name || ' ' || e.last_name AS employee_name, 
+       e.salary, 
+       SUM(e.salary) OVER (PARTITION BY e.department_id) AS dept_total_salary,
+       e.salary - AVG(e.salary) OVER (PARTITION BY e.department_id) AS salary_diff_from_avg
+FROM employees e;
+
+-- 17. Write a query to find the employees who were hired on the last day of the month, and display their employee ID, name, and hire date
+SELECT employee_id, first_name || ' ' || last_name AS employee_name, hire_date
+FROM employees
+WHERE hire_date = LAST_DAY(hire_date);
+
+-- 18. Display the employee name, department ID, and the number of employees in their department who earn more than the average salary
+SELECT e.first_name || ' ' || e.last_name AS employee_name, 
+       e.department_id, 
+       COUNT(*) OVER (PARTITION BY e.department_id) AS high_earners_count
+FROM employees e
+WHERE e.salary > (SELECT AVG(salary) FROM employees);
+
+-- 19. Write a query to find employees whose ID are greater than 100 and less than 150 and their department_id is greater than 90 and less than 100 along with their first_name, Last_name & Job ID
+SELECT first_name, last_name, job_id
+FROM employees
+WHERE employee_id BETWEEN 101 AND 149
+  AND department_id BETWEEN 91 AND 99;
+
+-- 20. Write a query to find total salary (Total salary formula = salary + (commission_pct* salary)) as "Total Salary", commission_pct where commission_pct is not equal to null
+SELECT salary + (commission_pct * salary) AS "Total Salary", commission_pct
+FROM employees
+WHERE commission_pct IS NOT NULL;

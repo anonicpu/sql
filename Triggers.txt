@@ -1,0 +1,344 @@
+-- Comprehensive Oracle Triggers Lab Tasks
+
+-- Prerequisite: Create necessary tables for demonstrations
+
+-- DML Trigger Tasks
+
+-- 1. Create a table and audit log table for change tracking
+CREATE TABLE employees (
+    employee_id NUMBER PRIMARY KEY,
+    name VARCHAR2(100),
+    department VARCHAR2(50),
+    salary NUMBER
+);
+
+CREATE TABLE employee_audit_log (
+    audit_id NUMBER PRIMARY KEY,
+    employee_id NUMBER,
+    action_type VARCHAR2(10),
+    action_timestamp TIMESTAMP,
+    old_salary NUMBER,
+    new_salary NUMBER,
+    action_user VARCHAR2(50)
+);
+
+-- DML Trigger 1: Logging Changes to Employees Table
+CREATE OR REPLACE TRIGGER trg_employee_change_log
+AFTER INSERT OR UPDATE OR DELETE ON employees
+FOR EACH ROW
+DECLARE
+    v_action VARCHAR2(10);
+BEGIN
+    -- Determine the type of action
+    IF INSERTING THEN
+        v_action := 'INSERT';
+    ELSIF UPDATING THEN
+        v_action := 'UPDATE';
+    ELSIF DELETING THEN
+        v_action := 'DELETE';
+    END IF;
+    
+    -- Insert audit log entry
+    INSERT INTO employee_audit_log (
+        audit_id, 
+        employee_id, 
+        action_type, 
+        action_timestamp, 
+        old_salary, 
+        new_salary, 
+        action_user
+    ) VALUES (
+        (SELECT NVL(MAX(audit_id), 0) + 1 FROM employee_audit_log),
+        :OLD.employee_id,
+        v_action,
+        SYSTIMESTAMP,
+        :OLD.salary,
+        :NEW.salary,
+        USER
+    );
+END;
+/
+
+-- Create departments table for referential integrity
+CREATE TABLE departments (
+    department_id NUMBER PRIMARY KEY,
+    department_name VARCHAR2(100)
+);
+
+-- DML Trigger 2: Referential Integrity Enforcement
+CREATE OR REPLACE TRIGGER trg_enforce_department
+BEFORE INSERT OR UPDATE ON employees
+FOR EACH ROW
+DECLARE
+    v_dept_exists NUMBER;
+BEGIN
+    -- Check if department exists
+    SELECT COUNT(*) INTO v_dept_exists
+    FROM departments
+    WHERE department_id = :NEW.department_id;
+    
+    -- Raise error if department doesn't exist
+    IF v_dept_exists = 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Invalid department. Department must exist in departments table.');
+    END IF;
+END;
+/
+
+-- DML Trigger 3: Automatic Last Modified Timestamp
+CREATE TABLE products (
+    product_id NUMBER PRIMARY KEY,
+    product_name VARCHAR2(100),
+    price NUMBER,
+    last_modified TIMESTAMP
+);
+
+CREATE OR REPLACE TRIGGER trg_update_last_modified
+BEFORE UPDATE ON products
+FOR EACH ROW
+BEGIN
+    -- Automatically update last_modified timestamp
+    :NEW.last_modified := SYSTIMESTAMP;
+END;
+/
+
+-- DDL Trigger Tasks
+
+-- Create audit table for DDL changes
+CREATE TABLE ddl_audit_log (
+    log_id NUMBER PRIMARY KEY,
+    event_type VARCHAR2(50),
+    object_name VARCHAR2(100),
+    object_type VARCHAR2(50),
+    event_timestamp TIMESTAMP,
+    username VARCHAR2(50)
+);
+
+-- DDL Trigger 1: Logging Schema Changes
+CREATE OR REPLACE TRIGGER trg_ddl_audit_log
+AFTER CREATE OR ALTER OR DROP ON DATABASE
+DECLARE
+    v_object_type VARCHAR2(50);
+    v_object_name VARCHAR2(100);
+BEGIN
+    -- Get the object details
+    v_object_type := DICTIONARY_OBJ_TYPE;
+    v_object_name := DICTIONARY_OBJ_NAME;
+    
+    -- Insert audit log entry
+    INSERT INTO ddl_audit_log (
+        log_id,
+        event_type,
+        object_name,
+        object_type,
+        event_timestamp,
+        username
+    ) VALUES (
+        (SELECT NVL(MAX(log_id), 0) + 1 FROM ddl_audit_log),
+        ORA_SYSEVENT,
+        v_object_name,
+        v_object_type,
+        SYSTIMESTAMP,
+        USER
+    );
+END;
+/
+
+-- DDL Trigger 2: Protect Critical Table
+CREATE OR REPLACE TRIGGER trg_protect_critical_table
+BEFORE ALTER OR DROP ON DATABASE
+WHEN (DICTIONARY_OBJ_NAME = 'CRITICAL_TABLE')
+BEGIN
+    -- Prevent alterations to a critical table
+    RAISE_APPLICATION_ERROR(-20002, 'Cannot alter or drop the critical table!');
+END;
+/
+
+-- DDL Trigger 3: Prevent Specific Table Naming
+CREATE OR REPLACE TRIGGER trg_prevent_table_creation
+BEFORE CREATE ON DATABASE
+WHEN (DICTIONARY_OBJ_TYPE = 'TABLE' AND REGEXP_LIKE(DICTIONARY_OBJ_NAME, '^TEMP_'))
+BEGIN
+    -- Prevent creation of tables starting with 'TEMP_'
+    RAISE_APPLICATION_ERROR(-20003, 'Cannot create tables with "TEMP_" prefix');
+END;
+/
+
+-- System Trigger Tasks
+
+-- Note: Some system triggers require specific database configurations
+-- Typically implemented using logon and logoff events
+
+-- System Trigger 1: User Login Tracking
+CREATE TABLE user_login_log (
+    log_id NUMBER PRIMARY KEY,
+    username VARCHAR2(50),
+    login_time TIMESTAMP,
+    ip_address VARCHAR2(50)
+);
+
+CREATE OR REPLACE TRIGGER trg_user_login_track
+AFTER LOGON ON DATABASE
+BEGIN
+    -- Log user login information
+    INSERT INTO user_login_log (
+        log_id,
+        username,
+        login_time,
+        ip_address
+    ) VALUES (
+        (SELECT NVL(MAX(log_id), 0) + 1 FROM user_login_log),
+        USER,
+        SYSTIMESTAMP,
+        SYS_CONTEXT('USERENV', 'IP_ADDRESS')
+    );
+END;
+/
+
+-- System Trigger 2: Privileged User Login Notification
+-- Note: Requires email configuration in the database
+CREATE OR REPLACE TRIGGER trg_privileged_user_login
+AFTER LOGON ON DATABASE
+WHEN (ORA_IS_ROLES_ENABLED('DBA'))
+DECLARE
+    v_email VARCHAR2(100) := 'dba@company.com';
+    v_msg VARCHAR2(500);
+BEGIN
+    v_msg := 'Privileged user ' || USER || ' has logged in at ' || TO_CHAR(SYSTIMESTAMP, 'YYYY-MM-DD HH24:MI:SS');
+    
+    -- Placeholder for email sending logic
+    -- Actual implementation depends on database email configuration
+    -- UTL_MAIL or external notification system would be used here
+    -- UTL_MAIL.SEND(...);
+END;
+/
+
+-- System Trigger 3: Automatic Session Time Zone
+CREATE OR REPLACE TRIGGER trg_set_session_timezone
+AFTER LOGON ON DATABASE
+BEGIN
+    -- Set default time zone for the session
+    EXECUTE IMMEDIATE 'ALTER SESSION SET TIME_ZONE = ''UTC''';
+END;
+/
+
+-- Instead of Trigger Tasks
+
+-- Create a view for multiple table insert
+CREATE TABLE customers (
+    customer_id NUMBER PRIMARY KEY,
+    customer_name VARCHAR2(100),
+    email VARCHAR2(100)
+);
+
+CREATE TABLE customer_accounts (
+    account_id NUMBER PRIMARY KEY,
+    customer_id NUMBER,
+    account_type VARCHAR2(50)
+);
+
+-- Create a view for the instead of trigger
+CREATE OR REPLACE VIEW vw_customer_registration AS
+SELECT NULL AS customer_id, NULL AS customer_name, NULL AS email, NULL AS account_type FROM DUAL;
+
+-- Instead of Trigger 1: Insert into Multiple Tables
+CREATE OR REPLACE TRIGGER trg_instead_of_customer_insert
+INSTEAD OF INSERT ON vw_customer_registration
+FOR EACH ROW
+DECLARE
+    v_customer_id NUMBER;
+BEGIN
+    -- Insert into customers table
+    INSERT INTO customers (customer_id, customer_name, email)
+    VALUES ((SELECT NVL(MAX(customer_id), 0) + 1 FROM customers), 
+            :NEW.customer_name, 
+            :NEW.email)
+    RETURNING customer_id INTO v_customer_id;
+    
+    -- Insert into customer_accounts table
+    INSERT INTO customer_accounts (account_id, customer_id, account_type)
+    VALUES ((SELECT NVL(MAX(account_id), 0) + 1 FROM customer_accounts), 
+            v_customer_id, 
+            :NEW.account_type);
+END;
+/
+
+-- Create a table with computed column
+CREATE TABLE order_details (
+    order_id NUMBER PRIMARY KEY,
+    base_price NUMBER,
+    tax_rate NUMBER DEFAULT 0.1,
+    total_price NUMBER GENERATED ALWAYS AS (base_price * (1 + tax_rate)) STORED
+);
+
+-- Create a view for the instead of trigger
+CREATE OR REPLACE VIEW vw_order_entry AS
+SELECT NULL AS order_id, NULL AS base_price FROM DUAL;
+
+-- Instead of Trigger 2: Update with Computed Column
+CREATE OR REPLACE TRIGGER trg_instead_of_order_update
+INSTEAD OF INSERT ON vw_order_entry
+FOR EACH ROW
+BEGIN
+    INSERT INTO order_details (order_id, base_price)
+    VALUES ((SELECT NVL(MAX(order_id), 0) + 1 FROM order_details), 
+            :NEW.base_price);
+END;
+/
+
+-- Create a more complex scenario for multiple related tables
+CREATE TABLE orders_master (
+    order_id NUMBER PRIMARY KEY,
+    customer_id NUMBER,
+    order_date DATE
+);
+
+CREATE TABLE order_items (
+    order_item_id NUMBER PRIMARY KEY,
+    order_id NUMBER,
+    product_id NUMBER,
+    quantity NUMBER,
+    price NUMBER
+);
+
+-- Create a view for multiple table insertion
+CREATE OR REPLACE VIEW vw_order_insertion AS
+SELECT NULL AS order_id, 
+       NULL AS customer_id, 
+       NULL AS order_date, 
+       NULL AS product_id, 
+       NULL AS quantity, 
+       NULL AS price 
+FROM DUAL;
+
+-- Instead of Trigger 3: Insert into Multiple Related Tables
+CREATE OR REPLACE TRIGGER trg_instead_of_order_insert
+INSTEAD OF INSERT ON vw_order_insertion
+FOR EACH ROW
+DECLARE
+    v_order_id NUMBER;
+BEGIN
+    -- Insert into orders_master
+    INSERT INTO orders_master (order_id, customer_id, order_date)
+    VALUES ((SELECT NVL(MAX(order_id), 0) + 1 FROM orders_master),
+            :NEW.customer_id,
+            :NEW.order_date)
+    RETURNING order_id INTO v_order_id;
+    
+    -- Insert into order_items
+    INSERT INTO order_items (order_item_id, order_id, product_id, quantity, price)
+    VALUES ((SELECT NVL(MAX(order_item_id), 0) + 1 FROM order_items),
+            v_order_id,
+            :NEW.product_id,
+            :NEW.quantity,
+            :NEW.price);
+END;
+/
+
+-- Additional setup and comments
+-- Note: These triggers require proper database configuration
+-- Some triggers (like email notification) need additional setup
+-- Always test in a controlled environment
+-- Adjust as needed for specific database configuration
+
+-- Helpful diagnostic query
+SELECT * FROM user_triggers;

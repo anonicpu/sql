@@ -1,0 +1,136 @@
+-- Oracle SQL Transaction Management Tasks
+
+-- Task 1: Product Inventory Transaction with Savepoint
+CREATE TABLE product_inventory (
+    product_id NUMBER PRIMARY KEY,
+    product_name VARCHAR2(100),
+    stock NUMBER,
+    price NUMBER(10,2)
+);
+
+-- Begin Transaction
+BEGIN
+    -- Insert initial product records
+    INSERT INTO product_inventory (product_id, product_name, stock, price)
+    VALUES (1, 'Laptop', 50, 1200.00);
+    
+    INSERT INTO product_inventory (product_id, product_name, stock, price)
+    VALUES (2, 'Smartphone', 100, 800.00);
+    
+    INSERT INTO product_inventory (product_id, product_name, stock, price)
+    VALUES (3, 'Tablet', 75, 500.00);
+    
+    -- Reduce stock of one product
+    UPDATE product_inventory 
+    SET stock = stock - 10 
+    WHERE product_id = 1;
+    
+    -- Create a savepoint
+    SAVEPOINT stock_update;
+    
+    -- Note: Transaction is not committed
+END;
+/
+
+-- Task 2: Employee Salary Transaction with Savepoint
+-- Assuming employee table already exists
+BEGIN
+    -- Insert a new employee
+    INSERT INTO employee (employee_id, name, salary)
+    VALUES (1001, 'John Doe', 50000);
+    
+    -- Increase salary by 10%
+    UPDATE employee
+    SET salary = salary * 1.1
+    WHERE employee_id = 1001;
+    
+    -- Create a savepoint after first salary increase
+    SAVEPOINT salary_increase;
+    
+    -- Further increase salary by 5%
+    UPDATE employee
+    SET salary = salary * 1.05
+    WHERE employee_id = 1001;
+    
+    -- Rollback to the savepoint
+    ROLLBACK TO salary_increase;
+END;
+/
+
+-- Task 3: Customer and Order Transaction
+BEGIN
+    -- Declare variables to store new customer and order IDs
+    DECLARE
+        v_customer_id NUMBER;
+        v_order_id NUMBER;
+    BEGIN
+        -- Insert new customer
+        INSERT INTO customer (customer_id, name, email)
+        VALUES (1001, 'Alice Smith', 'alice.smith@email.com')
+        RETURNING customer_id INTO v_customer_id;
+        
+        -- Insert order for the new customer
+        INSERT INTO orders (order_id, customer_id, order_date)
+        VALUES (2001, v_customer_id, SYSDATE);
+        
+        -- If both inserts are successful, commit the transaction
+        COMMIT;
+    EXCEPTION
+        -- If any error occurs, rollback the entire transaction
+        WHEN OTHERS THEN
+            ROLLBACK;
+            RAISE;
+    END;
+END;
+/
+
+-- Task 4: AUTOCOMMIT Mode
+-- Enable AUTOCOMMIT
+SET AUTOCOMMIT ON;
+
+-- Insert a row into sales table (will be automatically committed)
+INSERT INTO sales (sales_id, customer_id, amount)
+VALUES (501, 1001, 1250.50);
+
+-- Disable AUTOCOMMIT
+SET AUTOCOMMIT OFF;
+
+-- Task 5: Multiple Savepoints in Transaction
+BEGIN
+    -- Assuming transactions table exists with columns like 
+    -- transaction_id, account_id, amount, transaction_type
+    
+    -- Start with initial balance
+    INSERT INTO transactions (transaction_id, account_id, amount, transaction_type)
+    VALUES (1, 100, 1000, 'INITIAL');
+    
+    -- First debit
+    INSERT INTO transactions (transaction_id, account_id, amount, transaction_type)
+    VALUES (2, 100, -200, 'DEBIT');
+    
+    -- Create first savepoint
+    SAVEPOINT first_debit;
+    
+    -- Second credit
+    INSERT INTO transactions (transaction_id, account_id, amount, transaction_type)
+    VALUES (3, 100, 500, 'CREDIT');
+    
+    -- Create second savepoint
+    SAVEPOINT second_credit;
+    
+    -- Third debit
+    INSERT INTO transactions (transaction_id, account_id, amount, transaction_type)
+    VALUES (4, 100, -150, 'DEBIT');
+    
+    -- Create third savepoint
+    SAVEPOINT third_debit;
+    
+    -- Rollback to a specific savepoint (e.g., first_debit)
+    ROLLBACK TO first_debit;
+END;
+/
+
+-- Notes:
+-- 1. These scripts assume pre-existing tables for some operations
+-- 2. You may need to adjust table and column names to match your specific schema
+-- 3. Error handling and exact implementations may vary based on specific requirements

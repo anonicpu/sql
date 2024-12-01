@@ -1,0 +1,159 @@
+use school
+
+show dbs
+
+db.createCollection("students")
+
+show collections
+
+db.createCollection("library")
+
+show collections
+
+show dbs
+
+//Rename Collection from students to Student
+db.students.renameCollection("Student")
+
+show collections
+
+//commands for collection
+db.student.help()
+
+//for drop collection
+
+db.library.drop()
+
+//INSER ONE Document in collection
+school> db.Student.insertOne({Name:"Farzana", Age:23, class:"BCS-5F"})
+
+//insert many in collection
+school> db.Student.insertMany([ {name:"Amna", age:22, class:"BCS-5F"}, {name: "Ali", age: 25, class:"BCS-5F"}])
+
+
+//Update one Document
+
+db.Student.updateOne( { Name:"Fatima"}, { $set : {age:22, Name: "Fatimaaa"}} );
+
+//update many documents
+db.Student.updateMany({ class:"BCS-5F"}, {$set: {class:"BS-IT"}});
+
+//delete one document
+
+ db.Student.deleteOne({_id: ObjectId('6742fef4765119dac60d8194')})
+
+//delete many
+
+db.Student.deleteMany({class:"BCS-5F"})
+
+//Logocal operator and (must give feld name same
+
+db.Student.find({$and: [{Age:{$gt: 22}},{class:"BCS-5F"}]})
+
+// find specifc field
+
+school> db.Student.find({$and: [{Age:{$gt: 22}},{class:"BCS-5F"}]},{Name:1, Age:1,class:1, _id:0})
+
+//_id bydefault 1 
+
+ db.Student.find({$and: [{Age:{$gt: 22}},{class:"BCS-5F"}]},{Name:1, Age:1})
+
+//logical operator or
+
+ db.Student.find({$or:[{age:{$gt:22}}, {class:"BS-IT"}]})
+
+
+Query 1: Find students who are either in class "BS-IT" or age 23, and their name is "Amna" or "Ali".
+
+ db.Student.find({ $and: [ { $or: [{ "class": "BS-IT" }, { "age": 23 }] }, { $or: [{ "name": "Amna" }, { "name": "Ali" }] }] });
+
+Query 2: Find students who are in class "BS-IT" and either have age 22 or 25.
+
+db.Student.find({
+  $and: [
+    { "class": "BS-IT" },
+    { $or: [ { "age": 22 }, { "age": 25 } ] }
+  ]
+});
+
+
+Query 3: Find students whose name is "Fatima" or "Amna", and who are either in class "BS-IT" or age 23.
+
+db.Student.find({
+  $and: [
+    { $or: [ { "Name": "Fatima" }, { "name": "Amna" } ] },
+    { $or: [ { "class": "BS-IT" }, { "age": 23 } ] }
+  ]
+});
+
+
+//Display specific fields (name, age, and class)
+
+db.Student.find({}, { name: 1, age: 1, class: 1 });
+
+
+//Find students who have a score of 85 in "Physics"
+db.Student.find({ "scores.course": "Physics", "scores.score": 85 });
+
+
+
+
+
+
+
+
+// 1. Update the status of "Task 1" to "Completed"
+db.employees.updateOne(
+  { _id: ObjectId("60a72a88a69d92c4c8e9765"), title: "Task 1" },
+  { $set: { status: "Completed" } }
+);
+
+// 2. Retrieve tasks that are either "In Progress" or "Pending"
+db.employees.find({
+  status: { $in: ["In Progress", "Pending"] }
+});
+
+// 3. Find tasks due on or after December 15, 2023
+db.employees.find({
+  "due_date": { $gte: ISODate("2023-12-15") }
+});
+
+// 4. Write the query for the following output
+db.employees.find(
+  { _id: ObjectId("60a72a88a69d92c4c8e9764") },
+  { title: 1, description: 1, priority: 1, status: 1, "due_date": 1, "assigned_to": 1 }
+);
+
+// 5. Update the status to "In Progress" for tasks with priority 2 assigned to "Sooraj Kumar"
+db.employees.updateMany(
+  { priority: 2, "assigned_to": "Sooraj Kumar" },
+  { $set: { status: "In Progress" } }
+);
+
+
+
+
+// 1. Get the mentioned output without using the limit function
+db.collection.find({}, { "_id": 1, "qty": 1 });
+
+// 2. Get the mentioned output
+db.books.insertMany([
+  { "_id": 1, "item": "ABC123", "stock": 5, "info": { "publisher": "2222", "pages": 430 }, "tags": ["software"], "ratings": [{ "by": "lik", "rating": 4 }, { "byt": "xyz", "rating": 3 }], "reorder": false }
+]);
+
+// 3. Update the stock for all books with pages greater than 200
+db.books.updateMany(
+  { "pages": { $gt: 200 } },
+  { $set: { "stock": 0 } }
+);
+
+// 4. Insert the given records into the books collection
+db.books.insertMany([
+  { "_id": 3, "item": "DB For AI", "stock": 3, "info": { "publisher": "BAI-5A BAI-5B", "pages": 440 }, "tags": ["Artificial Intelligence"], "ratings": [{ "by": "Sohail", "rating": 5 }], "reorder": false },
+  { "_id": 4, "item": "Computer Vision", "stock": 7, "info": { "publisher": "Cambridge Press", "pages": 330 }, "tags": ["software"], "ratings": [{ "by": "Dr. M. Farrukh", "rating": 5 }, { "by": "Sohail", "rating": 4.5 }], "reorder": false }
+]);
+
+// 5. Find books with tags "technology" or "Artificial Intelligence"
+db.books.find({
+  "tags": { $in: ["technology", "Artificial Intelligence"] }
+});
